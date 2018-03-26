@@ -1,0 +1,16 @@
+{% block body %}
+<div class="quote_bank">
+<h4>Quote Bank</h4>
+    <hr/>
+    {% for quote in all_quotes %}
+
+        {% include 'quote_card.html' %}
+
+{#        <span class="add_favorite">#}
+{#            <a href="/quotes/{{ quote.id }}/add_fave/">#}
+{#                Favor-it!#}
+{#            </a>#}
+{#        </span>#}
+    {% endfor %}
+</div>
+{% endblock %}

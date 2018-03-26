@@ -1,0 +1,352 @@
+# """ALL THIS FROM HERE
+# https://www.fomfus.com/articles/how-to-use-email-as-username-for-django-authentication-removing-the-username
+#
+# How to use email as username for Django authentication (removing the username)
+# Check out my new package: Django use Email as Username.
+#
+# Based on the contents of this article, gives you a ready to use User model with email as username.
+#
+# A default Django install will give you a User model that has a mandatory username field, and an optional email field, and there is no automated way of changing that. For most of my projects, I want to have no username field and use the email instead for authenticating users. This is how it is done:
+#
+# IMPORTANT: This has to be done before you deploy your project, preferably right at the beginning, more info on the subject on docs.djangoproject.com.
+#
+# # Create a new Django app (optional)
+# # Create a custom User model.
+# # Substitute the default Django User model with yours.
+# # Create a custom Manager for the new User model.
+# # Register your new User model with Django admin (optional).
+# # Generate and run your migrations.
+# # Create your SuperUser.
+# Initial notes:
+#
+# Open up your terminal and cd to your Django project root, activating your virtual environment (because you should be using a virtual env) cd /my/django/project/path.
+# Every command you see from now on should be executed from the root of your Django project.
+# This is known to work with Django >=1.10.x.
+# Create a new Django app (optional)
+# Before you can create a custom User model, you need a Django app for it. If you already have an app where you want to use this model, skip this step.
+#
+# python manage.py startapp YOUR_APP
+# This will create a new app inside your Django project with the default structure:
+# """
+
+
+
+"""
+YOUR_APP
+├── __init__.py
+├── admin.py
+├── apps.py
+├── migrations
+│   └── __init__.py
+├── models.py
+├── tests.py
+└── views.py
+"""
+
+
+# Add your new app to your INSTALLED_APPS Django setting, open your settings.py file and add:
+
+## ... some other Django settings... ##
+
+# Application definition
+
+INSTALLED_APPS = [
+    # Default django installed apps
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+
+    # Include your new app.
+    'YOUR_APP',
+]
+
+## ... some other Django settings... ##
+
+#
+# Create a custom User model
+# With your app ready, proceed to define the model you are going to use for your Users in the models.py file of the app. Your file should look like this if you have no other models defined.
+#
+"""Declare models for YOUR_APP app."""
+
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+from django.utils.translation import ugettext_lazy as _
+
+
+class User(AbstractUser):
+    """User model."""
+
+    username = None
+    email = models.EmailField(_('email address'), unique=True)
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
+
+# You are:
+#
+# Extending the base class that Django has for User models.
+# Removing the username field.
+# Making the email field required and unique.
+# Telling Django that you are going to use the email field as the USERNAME_FIELD.
+# Removing the email field from the REQUIRED_FIELDS settings (it is automatically included as USERNAME_FIELD).
+# Substitute the default Django User model with yours
+
+"""
+Once you have your model defined, you need to tell Django to use it. This is done in the AUTH_USER_MODEL setting. Open your settings.py file and add:
+"""
+
+## ... some other Django settings... ##
+
+# User substitution
+# https://docs.djangoproject.com/en/1.11/topics/auth/customizing/#auth-custom-user
+
+AUTH_USER_MODEL = 'YOUR_APP.User'
+
+## ... some other Django settings... ##
+
+"""
+# Create a custom Manager for the new User model
+# Because your User model has one field less than the Django original, it is important to modify its manager and make sure it doesn't make use of the username field.
+
+# Open your models.py again and now add the following:
+"""
+from django.contrib.auth.models import AbstractUser, BaseUserManager ## A new class is imported. ##
+from django.db import models
+from django.utils.translation import ugettext_lazy as _
+
+# THIS IS NOT THE COMPLETE VERSION...GO DOWN A LITTLE FURTHER FOR THE COMPLETE UserManager code
+class UserManager(BaseUserManager):
+    """Define a model manager for User model with no username field."""
+
+    use_in_migrations = True
+
+    def _create_user(self, email, password, **extra_fields):
+        """Create and save a User with the given email and password."""
+        if not email:
+            raise ValueError('The given email must be set')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_user(self, email, password=None, **extra_fields):
+        """Create and save a regular User with the given email and password."""
+        extra_fields.setdefault('is_staff', False)
+        extra_fields.setdefault('is_superuser', False)
+        return self._create_user(email, password, **extra_fields)
+
+    def create_superuser(self, email, password, **extra_fields):
+        """Create and save a SuperUser with the given email and password."""
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self._create_user(email, password, **extra_fields)
+
+
+class User(AbstractUser):
+    """User model."""
+
+    ## Here goes the model definition from before. ##
+
+    objects = UserManager() ## This is the new line in the User model. ##
+"""
+
+# You are:
+#
+# Extending the base User manager that Django uses for its original UserManager.
+# Defining the same 3 methods that the original Django UserManager has.
+# Not using username in either of those methods.
+# Validating that email is provided when creating a User.
+# Assigning the new Manager to the User model.
+"""
+# Your complete models.py should be something like this:
+"""
+
+"""Declare models for YOUR_APP app."""
+
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.db import models
+from django.utils.translation import ugettext_lazy as _
+
+
+class UserManager(BaseUserManager):
+    """Define a model manager for User model with no username field."""
+
+    use_in_migrations = True
+
+    def _create_user(self, email, password, **extra_fields):
+        """Create and save a User with the given email and password."""
+        if not email:
+            raise ValueError('The given email must be set')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_user(self, email, password=None, **extra_fields):
+        """Create and save a regular User with the given email and password."""
+        extra_fields.setdefault('is_staff', False)
+        extra_fields.setdefault('is_superuser', False)
+        return self._create_user(email, password, **extra_fields)
+
+    def create_superuser(self, email, password, **extra_fields):
+        """Create and save a SuperUser with the given email and password."""
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self._create_user(email, password, **extra_fields)
+
+
+class User(AbstractUser):
+    """User model."""
+
+    username = None
+    email = models.EmailField(_('email address'), unique=True)
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
+
+    objects = UserManager()
+
+"""
+# Register your new User model with Django admin
+
+# IMPORTANT!!!
+
+# If you are using the Django admin site, you need to modify its integration with your model so it won't try to use the username field that you removed. This is done in the admin.py file. Open it and add the following:
+"""
+"""Integrate with admin module."""
+
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.utils.translation import ugettext_lazy as _
+
+from .models import User
+
+
+@admin.register(User)
+class UserAdmin(DjangoUserAdmin):
+    """Define admin model for custom User model with no email field."""
+
+    fieldsets = (
+        (None, {'fields': ('email', 'password')}),
+        (_('Personal info'), {'fields': ('first_name', 'last_name')}),
+        (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser',
+                                       'groups', 'user_permissions')}),
+        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+    )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'password1', 'password2'),
+        }),
+    )
+    list_display = ('email', 'first_name', 'last_name', 'is_staff')
+    search_fields = ('email', 'first_name', 'last_name')
+    ordering = ('email',)
+
+# You are:
+#
+# Extending the original UserAdmin class that Django admin provides.
+# Replacing the use of username for email.
+# Registering your new class to be used by Django admin for your new User model.
+
+
+# Generate and run your migrations
+# All done, you can now generate your migrations and run them:
+"""
+python manage.py makemigrations
+# Migrations for 'YOUR_APP':
+#   YOUR_APP/migrations/0001_initial.py
+#     - Create model User
+"""
+
+"""
+python manage.py migrate
+# Operations to perform:
+#   Apply all migrations: admin, auth, contenttypes, sessions, users
+# Running migrations:
+##   ... some migrations run before yours ##
+#   Applying users.0001_initial... OK
+##   ... some migrations run run yours ##
+"""
+
+"""
+# Create your SuperUser
+# And now all that is left to do is create your super user (super admin) and login to your site.
+"""
+
+
+# python manage.py createsuperuser
+# Email address: your@email.com
+# Password:
+# Password (again):
+# Superuser created successfully.
+
+"""
+Go to your site and log in.
+
+If you have any other way of doing this, let me know."""
+
+
+
+
+#WITH the custom User AND an extended "Profile" there is currently an error with the manager
+
+
+The fix is to adjust 1.11 django.contrib.auth.forms as follows:
+
+# EDITS made for custom User class
+# Line 12: 'from django.contrib.auth.models import User' - comment it right out
+# Line 88 - change User to UserModel
+# Line 128 - change User to UserModel
+
+
+
+Line 12 - comment it right out
+Line 88 - change User to UserModel
+Line 128 - change User to UserModel
+
+Here is the diff ...
+
+@@ -9,7 +9,7 @@ from django.contrib.auth import (
+  from django.contrib.auth.hashers import (
+      UNUSABLE_PASSWORD_PREFIX, identify_hasher,
+  )
+-from django.contrib.auth.models import User
++#from django.contrib.auth.models import User
+  from django.contrib.auth.tokens import default_token_generator
+  from django.contrib.sites.shortcuts import get_current_site
+  from django.core.mail import EmailMultiAlternatives
+@@ -85,7 +85,7 @@ class UserCreationForm(forms.ModelForm):
+      )
+
+      class Meta:
+-        model = User
++        model = UserModel
+          fields = ("username",)
+          field_classes = {'username': UsernameField}
+
+@@ -125,7 +125,7 @@ class UserChangeForm(forms.ModelForm):
+      )
+
+      class Meta:
+-        model = User
++        model = UserModel
+          fields = '__all__'
+          field_classes = {'username': UsernameField}

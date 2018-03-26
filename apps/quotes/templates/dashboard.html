@@ -1,0 +1,26 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+        <div class="sidebar">
+            {% block sidebar %}
+                {% include 'sidebar.html' %}
+                {% include 'quote_bank.html' %}
+            {% endblock %}
+        </div>
+        <div class="main_dash">
+
+            <h1>Greetings {{ greeting_name }}</h1>
+            <h2>Quote Dashboard</h2>
+            <hr/>
+            <br/>
+
+            {#    <div class="quote_bank">#}
+            {#        {% include 'quote_bank.html' %}#}
+            {#    </div>#}
+            <div class="favorite_quotes">
+                {% include 'user_favorites.html' %}
+            </div>
+            {% include 'submit_quote_form.html' %}
+        </div>
+
+{% endblock %}

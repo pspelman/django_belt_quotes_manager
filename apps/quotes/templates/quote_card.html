@@ -1,0 +1,38 @@
+{% block card %}
+    <div class="quote_card">
+        <span class="author">
+            {{ quote.author }}:
+        </span>
+        <span class="quote_text">
+            {{ quote.quote_text }}
+        </span><br/>
+        <span class="submitted_by">added by:
+            <a href="/quotes/user/{{ quote.contributor_id }}/all">
+                {{ quote.contributor }}
+            </a>
+        </span>
+
+        {% if request.user in quote.fave_users.all %}
+            <span class="add_favorite">
+            <a href="/quotes/{{ quote.id }}/add_fave/">
+                Un-fave
+            </a>
+        {% else %}
+            <span class="add_favorite">
+            <a href="/quotes/{{ quote.id }}/add_fave/">
+                Fave
+            </a>
+            </span>
+        {% endif %}
+        {% if quote.contributor == request.user %}
+            <span class="delete">
+            <a href="/quotes/{{ quote.id }}/delete/">
+                Delete forever
+            </a>
+            </span>
+        {% endif %}
+
+
+    </div>
+
+{% endblock %}

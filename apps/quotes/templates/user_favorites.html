@@ -1,0 +1,12 @@
+{% block body %}
+<h4>Your Faves</h4>
+
+{% if fave_quotes %}
+    {% for quote in fave_quotes %}
+        {% include 'quote_card.html' %}
+    {#    need to figure out if it IS a fave, then need to be able to UN favorite  #}
+    {% endfor %}
+{% else %}
+    No faves! Go check out the quote bank and pick a few
+    {% endif %}
+{% endblock %}
